@@ -1,15 +1,14 @@
 {
   "manifest_version": 3,
   "name": "GLaDOS Auto Check-in",
-  "version": "2.0.0",
-  "description": "GLaDOS 每日自动签到 — 支持自定义时间、随机延迟、积分通知、历史记录",
+  "version": "2.1.0",
+  "description": "GLaDOS 每日自动签到 — 支持自定义时间段、随机签到、签到通知、历史记录",
   "permissions": [
     "alarms",
     "storage",
     "notifications"
   ],
   "host_permissions": [
-    "https://glados.rocks/*",
     "https://glados.one/*"
   ],
   "background": {

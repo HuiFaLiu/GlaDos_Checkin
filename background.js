@@ -1,21 +1,21 @@
 // ============================================================
-// GLaDOS Auto Check-in v2.0 — Background Service Worker
+// GLaDOS Auto Check-in v2.1 — Background Service Worker
 // ============================================================
 
 const ALARM_NAME = 'glados-auto-checkin';
-const ALARM_RANDOM = 'glados-random-delay';
+const GLADOS_URL = 'https://glados.one/console/checkin';
 
 // ---- 默认配置 ----
 const DEFAULT_CONFIG = {
-  checkinHour: 8,          // 固定签到时间 - 时
-  checkinMinute: 0,        // 固定签到时间 - 分
-  randomTime: true,        // 是否启用随机时间段
-  randomStartHour: 8,      // 随机段 - 起始时
-  randomStartMinute: 0,    // 随机段 - 起始分
-  randomEndHour: 22,       // 随机段 - 结束时
-  randomEndMinute: 0,      // 随机段 - 结束分
-  notifyEnabled: true,     // 是否开启通知
-  autoCheckin: true,       // 是否自动签到
+  checkinHour: 8,
+  checkinMinute: 0,
+  randomTime: true,
+  randomStartHour: 8,
+  randomStartMinute: 0,
+  randomEndHour: 22,
+  randomEndMinute: 0,
+  notifyEnabled: true,
+  autoCheckin: true,
 };
 
 // ---- 工具函数 ----
@@ -43,14 +43,34 @@ function randomInt(min, max) {
 
 // ---- 通过 Content Script 请求 API ----
 
-async function sendToContentScript(action) {
-  // 找到一个 glados.one 的 tab
+async function ensureGladosTab() {
   const tabs = await chrome.tabs.query({ url: 'https://glados.one/*' });
-  if (tabs.length === 0) {
-    throw new Error('未找到 GLaDOS 页面，请先打开 glados.one');
+  if (tabs.length > 0) {
+    return tabs.find(t => t.active) || tabs[0];
   }
-  // 用第一个活跃的 tab
-  const tab = tabs.find(t => t.active) || tabs[0];
+  // 没有打开的标签页，自动创建一个后台标签
+  log('未找到 GLaDOS 页面，自动打开后台标签...');
+  const tab = await chrome.tabs.create({ url: GLADOS_URL, active: false });
+  // 等待页面加载完成
+  await new Promise(resolve => {
+    const listener = (tabId, info) => {
+      if (tabId === tab.id && info.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+    // 超时 15 秒
+    setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    }, 15000);
+  });
+  return tab;
+}
+
+async function sendToContentScript(action) {
+  const tab = await ensureGladosTab();
   try {
     const response = await chrome.tabs.sendMessage(tab.id, { action });
     return response;
@@ -92,13 +112,11 @@ async function doCheckin() {
       raw: data
     };
 
-    // 保存上次签到结果
     await chrome.storage.local.set({
       lastCheckin: result,
       lastCheckinTime: result.time
     });
 
-    // 添加到历史记录
     await addHistory(result);
 
     // 获取用户信息
@@ -143,11 +161,7 @@ async function doCheckin() {
 
     const config = await getConfig();
     if (config.notifyEnabled) {
-      if (error.message.includes('401') || error.message.includes('403') || error.message.includes('GLaDOS 页面')) {
-        showNotification('❌ GLaDOS 签到失败', error.message);
-      } else {
-        showNotification('❌ GLaDOS 签到失败', error.message);
-      }
+      showNotification('❌ GLaDOS 签到失败', error.message);
     }
 
     return failResult;
@@ -163,18 +177,11 @@ async function fetchUserInfo() {
 
     const info = {
       email: data.data?.email || '-',
-      points: data.data?.points ?? '-',
-      plan: data.data?.plan || '-',
-      days: data.data?.days || '-',
-      usedDays: data.data?.usedDays ?? '-',
-      traffic: data.data?.traffic ?? '-',
-      trafficUsed: data.data?.trafficUsed ?? '-',
-      leftDays: data.data?.leftDays ?? '-',
       updateTime: new Date().toISOString()
     };
 
     await chrome.storage.local.set({ userInfo: info });
-    log(`用户信息已更新: ${info.email}, 积分=${info.points}, 剩余=${info.leftDays}天`);
+    log(`用户信息已更新: ${info.email}`);
     return info;
 
   } catch (e) {
@@ -222,7 +229,6 @@ function getTodayRandomTime(config) {
   const startMin = config.randomStartHour * 60 + config.randomStartMinute;
   const endMin = config.randomEndHour * 60 + config.randomEndMinute;
 
-  // 如果起止相同或反转，用固定时间
   if (startMin >= endMin) {
     const t = new Date();
     t.setHours(config.checkinHour, config.checkinMinute, 0, 0);
@@ -245,17 +251,13 @@ async function scheduleAlarm() {
   }
 
   const now = new Date();
-
   let next;
+
   if (config.randomTime) {
-    // 在随机时间段内抽一个时间
     next = getTodayRandomTime(config);
-    // 如果抽到的时间已过，推到明天
     if (now >= next) {
       next.setDate(next.getDate() + 1);
-      // 重新抽一次明天的随机时间
       next = getTodayRandomTime(config);
-      // 确保明天的时间确实在明天（跨日处理）
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(0, 0, 0, 0);
@@ -265,7 +267,6 @@ async function scheduleAlarm() {
     }
     log(`随机时间段 ${config.randomStartHour}:${String(config.randomStartMinute).padStart(2,'0')} - ${config.randomEndHour}:${String(config.randomEndMinute).padStart(2,'0')}`);
   } else {
-    // 固定时间模式
     next = new Date();
     next.setHours(config.checkinHour, config.checkinMinute, 0, 0);
     if (now >= next) {
@@ -278,32 +279,24 @@ async function scheduleAlarm() {
     periodInMinutes: 24 * 60
   });
 
-  const timeStr = next.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-  log(`下次签到: ${timeStr}`);
-
-  await chrome.storage.local.set({
-    nextCheckinTime: next.toISOString()
-  });
+  log(`下次签到: ${next.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`);
+  await chrome.storage.local.set({ nextCheckinTime: next.toISOString() });
 }
 
 // ---- 事件监听 ----
 
 chrome.runtime.onInstalled.addListener(async () => {
   log('插件已安装/更新');
-  // 初始化默认配置
   const { config } = await chrome.storage.local.get('config');
   if (!config) {
     await chrome.storage.local.set({ config: DEFAULT_CONFIG });
   }
   await scheduleAlarm();
-  // 首次获取用户信息
-  await fetchUserInfo();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
   log('浏览器启动');
   await scheduleAlarm();
-  await fetchUserInfo();
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
@@ -321,10 +314,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'checkin':
         return await doCheckin();
 
-      case 'getStatus': {
-        const data = await chrome.storage.local.get(['lastCheckin', 'nextCheckinTime', 'userInfo', 'config']);
-        return data;
-      }
+      case 'getStatus':
+        return await chrome.storage.local.get(['lastCheckin', 'nextCheckinTime', 'userInfo', 'config']);
 
       case 'getHistory': {
         const { [HISTORY_KEY]: history = [] } = await chrome.storage.local.get(HISTORY_KEY);
@@ -357,5 +348,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   };
 
   handler().then(sendResponse);
-  return true; // 异步响应
+  return true;
 });
