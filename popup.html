@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLaDOS Auto Check-in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-ring">
+          <div class="logo-dot"></div>
+        </div>
+        <div class="logo-text">
+          <h1>GL<span class="accent">a</span>DOS</h1>
+          <span class="subtitle">AUTO CHECK-IN v2.0</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="btnSettings" title="设置">⚙️</button>
+        <button class="icon-btn" id="btnRefresh" title="刷新用户信息">🔄</button>
+      </div>
+    </header>
+
+    <!-- 用户信息卡片 -->
+    <section class="user-card" id="userCard">
+      <div class="user-info-row">
+        <span class="user-icon">👤</span>
+        <span class="user-email" id="userEmail">未登录</span>
+      </div>
+    </section>
+
+    <!-- 状态卡片 -->
+    <section class="status-card" id="statusCard">
+      <div class="status-indicator">
+        <div class="pulse" id="pulse"></div>
+        <span class="status-text" id="statusText">等待检测...</span>
+      </div>
+      <div class="status-details" id="statusDetails"></div>
+    </section>
+
+    <!-- 操作按钮 -->
+    <button class="btn-checkin" id="btnCheckin">
+      <span class="btn-text">手动签到</span>
+      <span class="btn-loading" id="btnLoading">
+        <span class="spinner"></span>
+      </span>
+    </button>
+
+    <!-- 信息面板 -->
+    <section class="info-panel">
+      <div class="info-row">
+        <span class="info-label">上次签到</span>
+        <span class="info-value" id="lastTime">--</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">下次自动</span>
+        <span class="info-value" id="nextTime">--</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">剩余时长</span>
+        <span class="info-value" id="remainDays">--</span>
+      </div>
+    </section>
+
+    <!-- Tab 切换 -->
+    <div class="tab-bar">
+      <button class="tab active" data-tab="history">📜 历史</button>
+      <button class="tab" data-tab="settings">⚙️ 设置</button>
+    </div>
+
+    <!-- 历史记录面板 -->
+    <section class="tab-panel active" id="panelHistory">
+      <div class="log-section">
+        <div class="log-header">
+          <span>签到记录</span>
+          <div class="log-actions">
+            <button class="btn-small" id="btnExport" title="导出记录">📋</button>
+            <button class="btn-small btn-danger" id="btnClear" title="清空记录">🗑️</button>
+          </div>
+        </div>
+        <div class="log-list" id="logList">
+          <div class="log-empty">暂无记录</div>
+        </div>
+        <div class="log-pagination" id="logPagination" style="display:none;">
+          <button class="btn-page" id="btnPrevPage">◀</button>
+          <span class="page-info" id="pageInfo">1/1</span>
+          <button class="btn-page" id="btnNextPage">▶</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 设置面板 -->
+    <section class="tab-panel" id="panelSettings">
+      <div class="settings-section">
+        <h3 class="settings-title">⏰ 签到时间</h3>
+        <div class="setting-row">
+          <label class="setting-label">自动签到</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="cfgAutoCheckin" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row" id="fixedTimeRow">
+          <label class="setting-label">固定签到时间</label>
+          <div class="time-picker">
+            <select id="cfgHour"></select>
+            <span class="time-sep">:</span>
+            <select id="cfgMinute"></select>
+          </div>
+        </div>
+        <div class="setting-row">
+          <label class="setting-label">随机时间段</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="cfgRandomTime" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-row random-time-row" id="randomTimeRow">
+          <label class="setting-label">签到窗口</label>
+          <div class="time-range">
+            <div class="time-picker">
+              <select id="cfgRandomStartHour"></select>
+              <span class="time-sep">:</span>
+              <select id="cfgRandomStartMinute"></select>
+            </div>
+            <span class="range-sep">→</span>
+            <div class="time-picker">
+              <select id="cfgRandomEndHour"></select>
+              <span class="time-sep">:</span>
+              <select id="cfgRandomEndMinute"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h3 class="settings-title">🔔 通知</h3>
+        <div class="setting-row">
+          <label class="setting-label">签到后通知</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="cfgNotify" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <button class="btn-save" id="btnSave">💾 保存设置</button>
+    </section>
+
+    <!-- 底部 -->
+    <footer class="footer">
+      <span>v2.0 · GLaDOS Auto Check-in</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
