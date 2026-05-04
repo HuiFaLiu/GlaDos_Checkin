@@ -1,12 +1,14 @@
 {
   "manifest_version": 3,
   "name": "GLaDOS Auto Check-in",
-  "version": "2.1.0",
-  "description": "GLaDOS 每日自动签到 — 支持自定义时间段、随机签到、签到通知、历史记录",
+  "version": "3.0.0",
+  "description": "GLaDOS 每日自动签到 — 双保险方案 (cookies + DNR)，智能随机签到，开机补签，无需打开页面",
   "permissions": [
     "alarms",
     "storage",
-    "notifications"
+    "notifications",
+    "cookies",
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "https://glados.one/*"
@@ -26,12 +28,5 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  },
-  "content_scripts": [
-    {
-      "matches": ["https://glados.one/*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    }
-  ]
+  }
 }
