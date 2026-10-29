@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GLaDOS Auto Check-in</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -18,7 +16,7 @@
         </div>
         <div class="logo-text">
           <h1>GL<span class="accent">a</span>DOS</h1>
-          <span class="subtitle">AUTO CHECK-IN v2.0</span>
+          <span class="subtitle">AUTO CHECK-IN v3.2.3</span>
         </div>
       </div>
       <div class="header-actions">
@@ -32,6 +30,7 @@
       <div class="user-info-row">
         <span class="user-icon">👤</span>
         <span class="user-email" id="userEmail">未登录</span>
+        <span class="user-domain" id="userDomain"></span>
       </div>
     </section>
 
@@ -59,12 +58,16 @@
         <span class="info-value" id="lastTime">--</span>
       </div>
       <div class="info-row">
-        <span class="info-label">下次自动</span>
+        <span class="info-label" id="nextLabel">下次自动</span>
         <span class="info-value" id="nextTime">--</span>
       </div>
       <div class="info-row">
         <span class="info-label">剩余时长</span>
         <span class="info-value" id="remainDays">--</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">积分</span>
+        <span class="info-value" id="points">--</span>
       </div>
     </section>
 
@@ -151,11 +154,12 @@
       </div>
 
       <button class="btn-save" id="btnSave">💾 保存设置</button>
+      <button class="btn-save btn-diagnose" id="btnDiagnose">🩺 网络诊断</button>
     </section>
 
     <!-- 底部 -->
     <footer class="footer">
-      <span>v2.0 · GLaDOS Auto Check-in</span>
+      <span>v3.2.3 · GLaDOS Auto Check-in</span>
     </footer>
   </div>
 
